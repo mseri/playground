@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Number Matching Game</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            touch-action: manipulation;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 5px;
+            margin: 20px;
+            max-width: 500px;
+        }
+        
+        .cell {
+            width: 40px;
+            height: 40px;
+            border: 2px solid #333;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            cursor: pointer;
+            background-color: #fff;
+            transition: all 0.3s;
+            user-select: none;
+        }
+        
+        .cell.selected {
+            background-color: #a8daff;
+        }
+        
+        .cell.hidden {
+            visibility: hidden;
+        }
+
+        .cell.invalid {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .cell.new {
+            animation: highlightNew 1s ease-out;
+        }
+
+        @keyframes highlightNew {
+            from {
+                background-color: #90EE90;
+            }
+            to {
+                background-color: #fff;
+            }
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin: 10px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            font-size: 18px;
+            border-radius: 8px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+
+        #addRowBtn {
+            background-color: #28a745;
+        }
+        
+        button:active {
+            transform: scale(0.98);
+        }
+        
+        .message {
+            font-size: 20px;
+            margin: 20px;
+            color: #28a745;
+        }
+
+        .rules {
+            text-align: center;
+            margin: 10px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .info {
+            text-align: center;
+            margin: 5px;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Number Matching Game</h1>
+    <div class="rules">
+        Match adjacent pairs that sum to 10 or find identical numbers.<br>
+        Numbers at edges can connect to the opposite side!
+    </div>
+    <div class="info">Number of rows: <span id="rowCount">10</span></div>
+    <div class="message"></div>
+    <div class="grid"></div>
+    <div class="buttons">
+        <button onclick="resetGame()">Reset Game</button>
+        <button id="addRowBtn" onclick="addNewRows()">Add 3 Rows</button>
+    </div>
+
+    <script>
+        let grid = [];
+        let selectedCells = [];
+        const GRID_WIDTH = 10;
+        let lastAddedIndex = -1;
+        
+        function createGrid() {
+            grid = [];
+            for (let i = 0; i < 100; i++) {
+                grid.push(Math.floor(Math.random() * 9) + 1); // 1-9
+            }
+            lastAddedIndex = -1;
+        }
+
+        function generateNewRows() {
+            const newRows = [];
+            for (let i = 0; i < GRID_WIDTH * 3; i++) {
+                newRows.push(Math.floor(Math.random() * 9) + 1);
+            }
+            return newRows;
+        }
+
+        function addNewRows() {
+            const newRows = generateNewRows();
+            lastAddedIndex = grid.length;
+            grid.push(...newRows);
+            renderGrid();
+            updateRowCount();
+        }
+
+        function isAdjacent(index1, index2) {
+            const row1 = Math.floor(index1 / GRID_WIDTH);
+            const col1 = index1 % GRID_WIDTH;
+            const row2 = Math.floor(index2 / GRID_WIDTH);
+            const col2 = index2 % GRID_WIDTH;
+            const numRows = Math.ceil(grid.length / GRID_WIDTH);
+
+            // Handle periodic boundaries
+            const rowDiff = Math.min(
+                Math.abs(row1 - row2),
+                Math.abs(row1 - row2 + numRows),
+                Math.abs(row1 - row2 - numRows)
+            );
+            const colDiff = Math.min(
+                Math.abs(col1 - col2),
+                Math.abs(col1 - col2 + GRID_WIDTH),
+                Math.abs(col1 - col2 - GRID_WIDTH)
+            );
+
+            return (rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1);
+        }
+        
+        function renderGrid() {
+            const gridElement = document.querySelector('.grid');
+            gridElement.innerHTML = '';
+            
+            grid.forEach((number, index) => {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                if (number !== null) {
+                    cell.textContent = number;
+                    cell.dataset.index = index;
+
+                    // Highlight new cells
+                    if (index >= lastAddedIndex && lastAddedIndex !== -1) {
+                        cell.classList.add('new');
+                    }
+
+                    // If first cell is selected, highlight valid adjacent cells
+                    if (selectedCells.length === 1) {
+                        const firstIndex = parseInt(selectedCells[0].dataset.index);
+                        if (!isAdjacent(firstIndex, index)) {
+                            cell.classList.add('invalid');
+                        }
+                    }
+                    
+                    cell.addEventListener('click', () => handleCellClick(cell, index));
+                } else {
+                    cell.classList.add('hidden');
+                }
+                gridElement.appendChild(cell);
+            });
+        }
+        
+        function handleCellClick(cell, index) {
+            if (cell.classList.contains('hidden') || cell.classList.contains('invalid')) {
+                return;
+            }
+
+            if (selectedCells.length === 1) {
+                const firstIndex = parseInt(selectedCells[0].dataset.index);
+                if (!isAdjacent(firstIndex, index)) {
+                    return;
+                }
+            }
+            
+            if (selectedCells.length === 0 || selectedCells[0].dataset.index !== index.toString()) {
+                cell.classList.add('selected');
+                selectedCells.push(cell);
+                
+                if (selectedCells.length === 1) {
+                    renderGrid(); // Refresh grid to show valid moves
+                } else if (selectedCells.length === 2) {
+                    checkMatch();
+                }
+            }
+        }
+        
+        function checkMatch() {
+            const num1 = parseInt(selectedCells[0].textContent);
+            const num2 = parseInt(selectedCells[1].textContent);
+            const isMatch = (num1 + num2 === 10) || (num1 === num2);
+            
+            setTimeout(() => {
+                if (isMatch) {
+                    const indices = selectedCells.map(cell => parseInt(cell.dataset.index));
+                    selectedCells.forEach(cell => {
+                        cell.classList.remove('selected');
+                        cell.classList.add('hidden');
+                    });
+                    
+                    indices.forEach(index => {
+                        grid[index] = null;
+                    });
+
+                    handleEmptyRows();
+                    renderGrid();
+                    updateRowCount();
+                } else {
+                    selectedCells.forEach(cell => cell.classList.remove('selected'));
+                    renderGrid();
+                }
+                selectedCells = [];
+            }, 500);
+        }
+
+        function handleEmptyRows() {
+            let grid2D = [];
+            for (let i = 0; i < grid.length; i += GRID_WIDTH) {
+                grid2D.push(grid.slice(i, i + GRID_WIDTH));
+            }
+
+            grid2D = grid2D.filter(row => !row.every(cell => cell === null));
+            grid = grid2D.flat();
+            lastAddedIndex = -1; // Reset last added index after row removal
+        }
+
+        function updateRowCount() {
+            const numRows = Math.ceil(grid.length / GRID_WIDTH);
+            document.getElementById('rowCount').textContent = numRows;
+        }
+        
+        function resetGame() {
+            document.querySelector('.message').textContent = '';
+            selectedCells = [];
+            createGrid();
+            renderGrid();
+            updateRowCount();
+        }
+        
+        // Initialize game
+        resetGame();
+    </script>
+</body>
+</html>
