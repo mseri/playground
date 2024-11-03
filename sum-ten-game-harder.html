@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Number Matching Game</title>
     <style>
+        /* Previous styles remain the same... */
         body {
             display: flex;
             flex-direction: column;
@@ -111,7 +112,7 @@
 <body>
     <h1>Number Matching Game</h1>
     <div class="rules">
-        Match adjacent pairs that sum to 10 or find identical numbers.<br>
+        Match adjacent pairs (including diagonals) that sum to 10 or find identical numbers.<br>
         Numbers at edges can connect to the opposite side!
     </div>
     <div class="info">Number of rows: <span id="rowCount">10</span></div>
@@ -131,7 +132,7 @@
         function createGrid() {
             grid = [];
             for (let i = 0; i < 100; i++) {
-                grid.push(Math.floor(Math.random() * 9) + 1); // 1-9
+                grid.push(Math.floor(Math.random() * 9) + 1);
             }
             lastAddedIndex = -1;
         }
@@ -171,7 +172,8 @@
                 Math.abs(col1 - col2 - GRID_WIDTH)
             );
 
-            return (rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1);
+            // Allow horizontal, vertical, and diagonal connections
+            return (rowDiff <= 1 && colDiff <= 1) && !(rowDiff === 0 && colDiff === 0);
         }
         
         function renderGrid() {
@@ -185,12 +187,10 @@
                     cell.textContent = number;
                     cell.dataset.index = index;
 
-                    // Highlight new cells
                     if (index >= lastAddedIndex && lastAddedIndex !== -1) {
                         cell.classList.add('new');
                     }
 
-                    // If first cell is selected, highlight valid adjacent cells
                     if (selectedCells.length === 1) {
                         const firstIndex = parseInt(selectedCells[0].dataset.index);
                         if (!isAdjacent(firstIndex, index)) {
@@ -223,7 +223,7 @@
                 selectedCells.push(cell);
                 
                 if (selectedCells.length === 1) {
-                    renderGrid(); // Refresh grid to show valid moves
+                    renderGrid();
                 } else if (selectedCells.length === 2) {
                     checkMatch();
                 }
@@ -266,7 +266,7 @@
 
             grid2D = grid2D.filter(row => !row.every(cell => cell === null));
             grid = grid2D.flat();
-            lastAddedIndex = -1; // Reset last added index after row removal
+            lastAddedIndex = -1;
         }
 
         function updateRowCount() {
